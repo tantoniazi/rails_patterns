@@ -6,8 +6,13 @@ module Api
       before_action :set_post, only: %i[show update destroy]
 
       def index
-        result = Domain::UseCases::ListPosts.new.call(filters: index_filters)
-        @posts = result.value
+        result = Domain::UseCases::ListPosts.new.call(
+          filters: index_filters,
+          page: pagination_params[:page],
+          per_page: pagination_params[:per_page]
+        )
+        @pagination = result.value
+        @posts = @pagination.records
       end
 
       def show
@@ -55,7 +60,19 @@ module Api
       end
 
       def index_filters
-        params.permit(:status, :q).to_h.symbolize_keys
+        permitted = params.permit(:status, q: {})
+        {
+          status: permitted[:status],
+          q: permitted[:q]&.to_h.presence
+        }.compact
+      end
+
+      def pagination_params
+        page = params.fetch(:page, 1).to_i
+        per_page = params.fetch(:per_page, Infrastructure::Pagination::PagyPaginator::DEFAULT_PER_PAGE).to_i
+        per_page = per_page.clamp(1, Infrastructure::Pagination::PagyPaginator::MAX_PER_PAGE)
+
+        { page: [page, 1].max, per_page: per_page }
       end
 
       def post_params

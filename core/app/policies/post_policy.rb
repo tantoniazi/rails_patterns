@@ -1,30 +1,24 @@
 # frozen_string_literal: true
 
 class PostPolicy < ApplicationPolicy
-  def index?
-    user.present?
-  end
-
   def show?
-    user.present?
+    record.published? || owner? || admin? || moderator?
   end
 
   def create?
-    user.present?
+    user.permitted?(:post, :create) || admin?
   end
 
   def update?
-    owner? || admin? || moderator_can_edit?
+    owner? || admin? || (moderator? && user.permitted?(:post, :update))
   end
 
   def destroy?
-    owner? || admin?
+    owner? || admin? || (moderator? && user.permitted?(:post, :destroy))
   end
 
-  class Scope < Scope
-    def resolve
-      scope.all
-    end
+  def comment?
+    user.active?
   end
 
   private
@@ -37,7 +31,7 @@ class PostPolicy < ApplicationPolicy
     user.admin?
   end
 
-  def moderator_can_edit?
-    user.moderator? && user.permitted?(:post, :update)
+  def moderator?
+    user.moderator?
   end
 end

@@ -6,7 +6,9 @@ class User < ApplicationRecord
   enum :role, { member: 0, admin: 1, moderator: 2 }
 
   has_many :posts, dependent: :destroy
+  has_many :comments, dependent: :destroy
   has_one :profile, dependent: :destroy
+  has_one :account, dependent: :destroy
   accepts_nested_attributes_for :profile
 
   validates :name, presence: true, length: { minimum: 2, maximum: 100 }
@@ -19,6 +21,7 @@ class User < ApplicationRecord
 
   before_validation :set_defaults, on: :create
   after_create :create_profile
+  after_create :create_account
 
   def admin?
     role == "admin"
@@ -43,5 +46,9 @@ class User < ApplicationRecord
 
   def create_profile
     Profile.create!(user: self)
+  end
+
+  def create_account
+    Account.create!(user: self, balance: 0)
   end
 end

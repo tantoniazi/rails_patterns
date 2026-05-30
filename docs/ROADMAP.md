@@ -30,22 +30,22 @@
 |------|--------|---------|
 | REST API v1 completa | ✅ | posts, users, sessions |
 | JBuilder serializers | ✅ | views JSON |
-| Paginação (Pagy/Kaminari) | ⬜ | `GET /posts?page=1` |
-| Filtros Ransack | ⬜ | `GET /posts?q[title_cont]=` |
-| Rate limiting Rack::Attack | ⬜ | docs/08 |
+| Paginação (Pagy/Kaminari) | ✅ | `GET /posts?page=1` |
+| Filtros Ransack | ✅ | `GET /posts?q[title_cont]=` |
+| Rate limiting Rack::Attack | ✅ | docs/08 |
 | Cache Rails.cache | ⬜ | posts index cacheado |
 
 ---
 
-## Fase 2 – Banco de Dados (docs 03)
+## Fase 2 – Banco de Dados (docs 03) ✅
 
 | Item | Status | Entrega |
 |------|--------|---------|
-| Índices compostos | ✅ | posts status + published_at |
+| Índices compostos | ✅ | `index_posts_on_status_and_published_at` |
 | N+1 prevention | ✅ | includes nos repositories |
-| Counter cache | ⬜ | comments_count em posts |
-| Transactions + lock | ⬜ | transferência de saldo demo |
-| Materialized views | ⬜ | relatório de posts |
+| Counter cache | ✅ | comments_count em posts |
+| Transactions + lock | ✅ | `POST /api/v1/transfers` com `SELECT FOR UPDATE` |
+| Materialized views | ✅ | `posts_summaries` + `GET /api/v1/reports/posts_summary` |
 
 ---
 
@@ -81,7 +81,7 @@
 | Pundit policies | ✅ | PostPolicy, UserPolicy |
 | ACL permissions table | ✅ | Permission model |
 | Strong parameters | ✅ | controllers |
-| Rack::Attack | ⬜ | throttle login/API |
+| Rack::Attack | ✅ | throttle login/API |
 | Brakeman no CI | ⬜ | security scan |
 | CSP headers | ⬜ | initializer |
 
@@ -185,7 +185,7 @@
 
 ## Prioridade sugerida (próximos sprints)
 
-1. **Sprint 1:** Paginação + filtros + Rack::Attack (Fases 1 + 5)
+1. **Sprint 1:** Cache Rails.cache no posts index (Fase 1 restante)
 2. **Sprint 2:** Outbox Pattern + dead queue (Fase 4)
 3. **Sprint 3:** Lograge + Sentry + Brakeman CI (Fase 8)
 4. **Sprint 4:** GraphQL + Action Cable (Fase 10)

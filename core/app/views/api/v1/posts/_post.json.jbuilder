@@ -5,6 +5,7 @@ json.status post.status
 json.slug post.slug
 json.published_at post.published_at
 json.views_count post.views_count
+json.comments_count post.comments_count
 json.created_at post.created_at
 json.updated_at post.updated_at
 json.user do

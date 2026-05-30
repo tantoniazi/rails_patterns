@@ -14,6 +14,9 @@ gem "bcrypt"
 gem "pundit"
 gem "karafka", ">= 2.2"
 gem "rack-cors"
+gem "rack-attack"
+gem "pagy", "~> 9.0"
+gem "ransack"
 gem "bootsnap", require: false
 
 group :development, :test do

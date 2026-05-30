@@ -17,11 +17,31 @@ RSpec.describe "API V1 Posts", type: :request do
       expect(json["data"].length).to eq(3)
     end
 
-    it "includes meta total count" do
+    it "includes pagination meta" do
       get "/api/v1/posts", headers: headers
 
       json = JSON.parse(response.body)
-      expect(json["meta"]["total_count"]).to eq(3)
+      expect(json["meta"]).to include(
+        "page" => 1,
+        "per_page" => 20,
+        "total_count" => 3,
+        "total_pages" => 1
+      )
+    end
+
+    it "paginates results" do
+      create_list(:post, 2, :published, user: user)
+
+      get "/api/v1/posts", params: { page: 2, per_page: 2 }, headers: headers
+
+      json = JSON.parse(response.body)
+      expect(json["data"].length).to eq(2)
+      expect(json["meta"]).to include(
+        "page" => 2,
+        "per_page" => 2,
+        "total_count" => 5,
+        "total_pages" => 3
+      )
     end
 
     it "filters by status" do
@@ -31,6 +51,24 @@ RSpec.describe "API V1 Posts", type: :request do
       json = JSON.parse(response.body)
       statuses = json["data"].map { |p| p["status"] }
       expect(statuses.uniq).to eq(["published"])
+      expect(json["meta"]["total_count"]).to eq(3)
+    end
+
+    it "filters by ransack title_cont" do
+      create(:post, :published, user: user, title: "Unique Searchable Title Here")
+      get "/api/v1/posts", params: { q: { title_cont: "Unique Searchable" } }, headers: headers
+
+      json = JSON.parse(response.body)
+      expect(json["data"].length).to eq(1)
+      expect(json["data"].first["title"]).to include("Unique Searchable")
+    end
+
+    it "filters by ransack status_eq" do
+      create(:post, :draft, user: user)
+      get "/api/v1/posts", params: { q: { status_eq: "draft" } }, headers: headers
+
+      json = JSON.parse(response.body)
+      expect(json["data"].map { |p| p["status"] }.uniq).to eq(["draft"])
     end
 
     context "without authentication" do

@@ -108,7 +108,6 @@ services:
       POSTGRES_HOST: core_db
       POSTGRES_USER: rails
       POSTGRES_PASSWORD: rails
-      DATABASE_URL: postgres://rails:rails@core_db:5432/core_development
       REDIS_URL: redis://redis:6379/0
       KAFKA_URL: kafka:29092
       RAILS_ENV: development
@@ -136,7 +135,6 @@ services:
       POSTGRES_HOST: core_db
       POSTGRES_USER: rails
       POSTGRES_PASSWORD: rails
-      DATABASE_URL: postgres://rails:rails@core_db:5432/core_development
       REDIS_URL: redis://redis:6379/0
       KAFKA_URL: kafka:29092
       RAILS_ENV: development

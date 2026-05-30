@@ -4,6 +4,7 @@ class Post < ApplicationRecord
   enum :status, { draft: 0, published: 1, archived: 2 }
 
   belongs_to :user
+  has_many :comments, dependent: :destroy
 
   validates :title, presence: true, length: { minimum: 5, maximum: 200 }
   validates :body, presence: true
@@ -17,7 +18,14 @@ class Post < ApplicationRecord
   scope :draft, -> { where(status: :draft) }
   scope :recent, -> { order(created_at: :desc) }
   scope :by_author, ->(user_id) { where(user_id: user_id) }
-  scope :search, ->(q) { where("title ILIKE ? OR body ILIKE ?", "%#{q}%", "%#{q}%") }
+
+  def self.ransackable_attributes(_auth_object = nil)
+    %w[title body status created_at published_at user_id views_count]
+  end
+
+  def self.ransackable_associations(_auth_object = nil)
+    %w[user]
+  end
 
   def increment_views!
     Post.update_counters(id, views_count: 1)

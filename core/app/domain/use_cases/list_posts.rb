@@ -6,9 +6,9 @@ module UseCases
       @post_repo = post_repo
     end
 
-    def call(filters: {})
-      posts = @post_repo.all(filters: filters)
-      Domain::Result.ok(posts)
+    def call(filters: {}, page: 1, per_page: Infrastructure::Pagination::PagyPaginator::DEFAULT_PER_PAGE)
+      collection = @post_repo.all(filters: filters, page: page, per_page: per_page)
+      Domain::Result.ok(collection)
     end
   end
 end

@@ -33,10 +33,18 @@ test: test-core test-consumer ## Roda todos os testes (Docker)
 	@echo "✅ Todos os testes concluídos"
 
 test-core: ## RSpec do core
-	$(COMPOSE) run --rm core bash -c "bundle exec rails db:test:prepare && bundle exec rspec"
+	$(COMPOSE) run --rm \
+	  -e RAILS_ENV=test \
+	  -e POSTGRES_HOST=core_db \
+	  -e POSTGRES_USER=rails \
+	  -e POSTGRES_PASSWORD=rails \
+	  core bash -c "bundle exec rails db:test:prepare && bundle exec rspec"
 
 test-consumer: ## RSpec do consumer
-	$(COMPOSE) run --rm consumer bash -c "bundle exec rails db:test:prepare && bundle exec rspec"
+	$(COMPOSE) run --rm --no-deps \
+	  -e RAILS_ENV=test \
+	  -e CONSUMER_DATABASE_URL=postgres://rails:rails@consumer_db:5432/consumer_test \
+	  consumer bash -c "bundle exec rails db:test:prepare && bundle exec rspec"
 
 test-frontend: ## Build do frontend (validação)
 	cd frontend && npm run build

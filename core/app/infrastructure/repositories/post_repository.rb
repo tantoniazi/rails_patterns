@@ -4,12 +4,13 @@ module Repositories
   class PostRepository
     include Domain::Ports::PostRepository
 
-    def all(filters: {})
-      scope = ::Post.recent.includes(:user)
-      scope = scope.where(status: filters[:status]) if filters[:status].present?
-      scope = scope.search(filters[:q]) if filters[:q].present?
-      scope = scope.by_author(filters[:user_id]) if filters[:user_id].present?
-      scope
+    def initialize(paginator: Pagination::PagyPaginator.new)
+      @paginator = paginator
+    end
+
+    def all(filters: {}, page: 1, per_page: Pagination::PagyPaginator::DEFAULT_PER_PAGE)
+      scope = base_scope(filters)
+      @paginator.paginate(scope, page: page, per_page: per_page)
     end
 
     def find(id)
@@ -42,6 +43,21 @@ module Repositories
         published_at: post.published_at,
         views_count: post.views_count
       )
+    end
+
+    private
+
+    def base_scope(filters)
+      scope = ::Post.recent.includes(:user)
+
+      if filters[:q].present?
+        scope = ::Post.ransack(filters[:q]).result(distinct: true)
+        scope = scope.recent.includes(:user)
+      end
+
+      scope = scope.where(status: filters[:status]) if filters[:status].present?
+      scope = scope.by_author(filters[:user_id]) if filters[:user_id].present?
+      scope
     end
   end
 end

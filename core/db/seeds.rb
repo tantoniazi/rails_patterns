@@ -1,6 +1,5 @@
 # frozen_string_literal: true
 
-# Default permissions for role-based ACL
 permissions = [
   { role: "moderator", resource: "post", action: "update" },
   { role: "moderator", resource: "post", action: "destroy" },
@@ -23,6 +22,12 @@ member = User.find_or_create_by!(email: "member@example.com") do |user|
   user.role = :member
 end
 
+[admin, member].each do |user|
+  Account.find_or_create_by!(user: user) do |account|
+    account.balance = user.admin? ? 1_000.0 : 500.0
+  end
+end
+
 Post.find_or_create_by!(slug: "welcome-to-core") do |post|
   post.user = admin
   post.title = "Welcome to Core API"
@@ -30,5 +35,7 @@ Post.find_or_create_by!(slug: "welcome-to-core") do |post|
   post.status = :published
   post.published_at = Time.current
 end
+
+PostsSummary.refresh! if PostsSummary.table_exists?
 
 puts "Seeded: admin=#{admin.email}, member=#{member.email}"

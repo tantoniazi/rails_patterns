@@ -1,8 +1,28 @@
 # This file is auto-generated from migrations. Run `bin/rails db:migrate` to update.
 # frozen_string_literal: true
 
-ActiveRecord::Schema[7.1].define(version: 20_240_529_000_005) do
+ActiveRecord::Schema[7.1].define(version: 20_260_529_130_004) do
   enable_extension "plpgsql"
+
+  create_table "accounts", force: :cascade do |t|
+    t.bigint "user_id", null: false
+    t.decimal "balance", precision: 12, scale: 2, default: "0.0", null: false
+    t.integer "lock_version", default: 0, null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["user_id"], name: "index_accounts_on_user_id", unique: true
+  end
+
+  create_table "comments", force: :cascade do |t|
+    t.bigint "post_id", null: false
+    t.bigint "user_id", null: false
+    t.text "body", null: false
+    t.datetime "created_at", null: false
+    t.datetime "updated_at", null: false
+    t.index ["post_id", "created_at"], name: "index_comments_on_post_id_and_created_at"
+    t.index ["post_id"], name: "index_comments_on_post_id"
+    t.index ["user_id"], name: "index_comments_on_user_id"
+  end
 
   create_table "permissions", force: :cascade do |t|
     t.string "role", null: false
@@ -21,10 +41,12 @@ ActiveRecord::Schema[7.1].define(version: 20_240_529_000_005) do
     t.string "slug"
     t.datetime "published_at"
     t.integer "views_count", default: 0, null: false
+    t.integer "comments_count", default: 0, null: false
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.index ["published_at"], name: "index_posts_on_published_at"
     t.index ["slug"], name: "index_posts_on_slug", unique: true
+    t.index ["status", "published_at"], name: "index_posts_on_status_and_published_at", order: { published_at: :desc }
     t.index ["status"], name: "index_posts_on_status"
     t.index ["user_id"], name: "index_posts_on_user_id"
   end
@@ -58,6 +80,9 @@ ActiveRecord::Schema[7.1].define(version: 20_240_529_000_005) do
     t.index ["role"], name: "index_users_on_role"
   end
 
+  add_foreign_key "accounts", "users"
+  add_foreign_key "comments", "posts"
+  add_foreign_key "comments", "users"
   add_foreign_key "posts", "users"
   add_foreign_key "profiles", "users"
 end

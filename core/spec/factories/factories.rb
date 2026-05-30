@@ -33,6 +33,17 @@ FactoryBot.define do
     action { "update" }
   end
 
+  factory :comment do
+    association :post
+    association :user
+    body { Faker::Lorem.paragraph }
+  end
+
+  factory :account do
+    association :user
+    balance { 100.0 }
+  end
+
   factory :post do
     association :user
     sequence(:title) { |n| "Post Title #{n} about Rails" }

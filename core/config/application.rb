@@ -25,6 +25,8 @@ module Core
     config.active_job.queue_adapter = :sidekiq
     config.time_zone = "UTC"
 
+    config.middleware.use Rack::Attack
+
     config.autoload_paths += %W[#{config.root}/app/interfaces/controllers]
     config.eager_load_paths += %W[#{config.root}/app/interfaces/controllers]
 
