@@ -1,0 +1,64 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: consumer-db-secret
+  namespace: rails-patterns
+type: Opaque
+stringData:
+  POSTGRES_USER: rails
+  POSTGRES_PASSWORD: rails
+  POSTGRES_DB: consumer_production
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: consumer-db-pvc
+  namespace: rails-patterns
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 2Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-db
+  namespace: rails-patterns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: consumer-db
+  template:
+    metadata:
+      labels:
+        app: consumer-db
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: consumer-db-secret
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: consumer-db-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: consumer-db
+  namespace: rails-patterns
+spec:
+  selector:
+    app: consumer-db
+  ports:
+    - port: 5432
+      targetPort: 5432

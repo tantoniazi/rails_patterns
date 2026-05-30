@@ -1,16 +1,39 @@
-version: "3.9"
-
 services:
-  db:
+  core_db:
     image: postgres:16-alpine
     environment:
       POSTGRES_USER: rails
       POSTGRES_PASSWORD: rails
-      POSTGRES_DB: rails_development
+      POSTGRES_DB: core_development
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - core_postgres_data:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rails -d core_development"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app
+
+  consumer_db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: rails
+      POSTGRES_PASSWORD: rails
+      POSTGRES_DB: consumer_development
+    volumes:
+      - consumer_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rails -d consumer_development"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app
 
   redis:
     image: redis:7-alpine
@@ -18,12 +41,21 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - app
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+    networks:
+      - app
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
@@ -39,6 +71,13 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+    healthcheck:
+      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+    networks:
+      - app
 
   kafka_ui:
     image: provectuslabs/kafka-ui:latest
@@ -49,56 +88,143 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
     depends_on:
       - kafka
+    networks:
+      - app
 
-  web:
-    build: .
-    command: bash -c "rm -f tmp/pids/server.pid && bundle exec rails db:create db:migrate && bundle exec rails s -p 3000 -b '0.0.0.0'"
+  core:
+    build:
+      context: ./core
+      dockerfile: Dockerfile
+    command: >
+      bash -c "rm -f tmp/pids/server.pid &&
+      bundle exec rails db:prepare db:seed &&
+      bundle exec rails s -p 3000 -b '0.0.0.0'"
     volumes:
-      - .:/rails
-      - bundle_cache:/usr/local/bundle
+      - ./core:/rails
+      - core_bundle_cache:/usr/local/bundle
     ports:
       - "3000:3000"
     environment:
-      DATABASE_URL: postgres://rails:rails@db/rails_development
+      POSTGRES_HOST: core_db
+      POSTGRES_USER: rails
+      POSTGRES_PASSWORD: rails
+      DATABASE_URL: postgres://rails:rails@core_db:5432/core_development
       REDIS_URL: redis://redis:6379/0
       KAFKA_URL: kafka:29092
       RAILS_ENV: development
+      JWT_SECRET: dev-jwt-secret-change-in-production
+      CORS_ORIGINS: http://localhost:5173,http://frontend:5173
     depends_on:
-      - db
-      - redis
-      - kafka
+      core_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - app
 
   sidekiq:
-    build: .
+    build:
+      context: ./core
+      dockerfile: Dockerfile
     command: bundle exec sidekiq -C config/sidekiq.yml
     volumes:
-      - .:/rails
-      - bundle_cache:/usr/local/bundle
+      - ./core:/rails
+      - core_bundle_cache:/usr/local/bundle
     environment:
-      DATABASE_URL: postgres://rails:rails@db/rails_development
+      POSTGRES_HOST: core_db
+      POSTGRES_USER: rails
+      POSTGRES_PASSWORD: rails
+      DATABASE_URL: postgres://rails:rails@core_db:5432/core_development
       REDIS_URL: redis://redis:6379/0
       KAFKA_URL: kafka:29092
       RAILS_ENV: development
+      JWT_SECRET: dev-jwt-secret-change-in-production
     depends_on:
-      - db
-      - redis
+      core_db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app
 
-  karafka:
-    build: .
+  consumer:
+    build:
+      context: ./consumer
+      dockerfile: Dockerfile
+    command: >
+      bash -c "rm -f tmp/pids/server.pid &&
+      bundle exec rails db:prepare &&
+      bundle exec rails s -p 3001 -b '0.0.0.0'"
+    volumes:
+      - ./consumer:/rails
+      - consumer_bundle_cache:/usr/local/bundle
+    ports:
+      - "3001:3001"
+    environment:
+      CONSUMER_DATABASE_URL: postgres://rails:rails@consumer_db:5432/consumer_development
+      CONSUMER_DATABASE_HOST: consumer_db
+      CONSUMER_DATABASE_USERNAME: rails
+      CONSUMER_DATABASE_PASSWORD: rails
+      KAFKA_URL: kafka:29092
+      RAILS_ENV: development
+    depends_on:
+      consumer_db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - app
+
+  consumer_karafka:
+    build:
+      context: ./consumer
+      dockerfile: Dockerfile
     command: bundle exec karafka server
     volumes:
-      - .:/rails
-      - bundle_cache:/usr/local/bundle
+      - ./consumer:/rails
+      - consumer_bundle_cache:/usr/local/bundle
     environment:
-      DATABASE_URL: postgres://rails:rails@db/rails_development
-      REDIS_URL: redis://redis:6379/0
+      CONSUMER_DATABASE_URL: postgres://rails:rails@consumer_db:5432/consumer_development
+      CONSUMER_DATABASE_HOST: consumer_db
+      CONSUMER_DATABASE_USERNAME: rails
+      CONSUMER_DATABASE_PASSWORD: rails
       KAFKA_URL: kafka:29092
       RAILS_ENV: development
     depends_on:
-      - db
-      - kafka
+      consumer_db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - app
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    command: npm run dev -- --host 0.0.0.0 --port 5173
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    ports:
+      - "5173:5173"
+    environment:
+      VITE_API_PROXY_TARGET: http://core:3000
+    depends_on:
+      - core
+    networks:
+      - app
+
+networks:
+  app:
+    driver: bridge
 
 volumes:
-  postgres_data:
+  core_postgres_data:
+  consumer_postgres_data:
   redis_data:
-  bundle_cache:
+  core_bundle_cache:
+  consumer_bundle_cache:
+  frontend_node_modules:

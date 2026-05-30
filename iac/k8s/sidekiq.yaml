@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sidekiq
+  namespace: rails-patterns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sidekiq
+  template:
+    metadata:
+      labels:
+        app: sidekiq
+    spec:
+      containers:
+        - name: sidekiq
+          image: rails-patterns/core:latest
+          command: ["bundle", "exec", "sidekiq", "-C", "config/sidekiq.yml"]
+          envFrom:
+            - configMapRef:
+                name: core-config
+            - secretRef:
+                name: core-secret

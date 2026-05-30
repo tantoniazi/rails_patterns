@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: consumer-config
+  namespace: rails-patterns
+data:
+  RAILS_ENV: production
+  KAFKA_URL: kafka:9092
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: consumer-secret
+  namespace: rails-patterns
+type: Opaque
+stringData:
+  CONSUMER_DATABASE_URL: postgres://rails:rails@consumer-db:5432/consumer_production
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: consumer-karafka
+  namespace: rails-patterns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: consumer-karafka
+  template:
+    metadata:
+      labels:
+        app: consumer-karafka
+    spec:
+      containers:
+        - name: karafka
+          image: rails-patterns/consumer:latest
+          command: ["bundle", "exec", "karafka", "server"]
+          envFrom:
+            - configMapRef:
+                name: consumer-config
+            - secretRef:
+                name: consumer-secret

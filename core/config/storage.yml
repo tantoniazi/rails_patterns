@@ -1,0 +1,13 @@
+# See https://guides.rubyonrails.org/active_storage_overview.html
+
+local:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>
+
+test:
+  service: Disk
+  root: <%= Rails.root.join("tmp/storage") %>
+
+production:
+  service: Disk
+  root: <%= Rails.root.join("storage") %>

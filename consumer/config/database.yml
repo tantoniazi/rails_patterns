@@ -1,0 +1,29 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: <%= ENV.fetch("RAILS_MAX_THREADS") { 5 } %>
+  host: <%= ENV.fetch("CONSUMER_DATABASE_HOST", "localhost") %>
+  username: <%= ENV.fetch("CONSUMER_DATABASE_USERNAME", "rails") %>
+  password: <%= ENV.fetch("CONSUMER_DATABASE_PASSWORD", "rails") %>
+  port: <%= ENV.fetch("CONSUMER_DATABASE_PORT", 5432) %>
+
+development:
+  <<: *default
+  database: consumer_development
+<% if ENV["CONSUMER_DATABASE_URL"].present? %>
+  url: <%= ENV["CONSUMER_DATABASE_URL"] %>
+<% end %>
+
+test:
+  <<: *default
+  database: consumer_test
+<% if ENV["CONSUMER_DATABASE_URL"].present? %>
+  url: <%= ENV["CONSUMER_DATABASE_URL"] %>
+<% end %>
+
+production:
+  <<: *default
+  database: <%= ENV.fetch("CONSUMER_DATABASE_NAME", "consumer_production") %>
+<% if ENV["CONSUMER_DATABASE_URL"].present? %>
+  url: <%= ENV["CONSUMER_DATABASE_URL"] %>
+<% end %>

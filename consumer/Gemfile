@@ -1,0 +1,22 @@
+source "https://rubygems.org"
+
+ruby "3.3.0"
+
+gem "rails", "~> 7.1.5"
+gem "pg", "~> 1.1"
+gem "puma", ">= 5.0"
+gem "redis", ">= 4.0.1", "< 5.4"
+gem "connection_pool", "~> 2.4"
+gem "karafka", "~> 2.4"
+gem "bootsnap", require: false
+gem "tzinfo-data", platforms: %i[windows jruby]
+
+group :development, :test do
+  gem "rspec-rails", "~> 7.0"
+  gem "factory_bot_rails"
+  gem "pry-rails"
+end
+
+group :test do
+  gem "database_cleaner-active_record"
+end

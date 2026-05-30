@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: core-config
+  namespace: rails-patterns
+data:
+  RAILS_ENV: production
+  POSTGRES_HOST: core-db
+  POSTGRES_USER: rails
+  REDIS_URL: redis://redis:6379/0
+  KAFKA_URL: kafka:9092
+  CORS_ORIGINS: "*"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: core-secret
+  namespace: rails-patterns
+type: Opaque
+stringData:
+  POSTGRES_PASSWORD: rails
+  JWT_SECRET: change-me-in-production
+  DATABASE_URL: postgres://rails:rails@core-db:5432/core_production
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: core
+  namespace: rails-patterns
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: core
+  template:
+    metadata:
+      labels:
+        app: core
+    spec:
+      containers:
+        - name: core
+          image: rails-patterns/core:latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: core-config
+            - secretRef:
+                name: core-secret
+          readinessProbe:
+            httpGet:
+              path: /api/v1/health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: core
+  namespace: rails-patterns
+spec:
+  selector:
+    app: core
+  ports:
+    - port: 3000
+      targetPort: 3000
